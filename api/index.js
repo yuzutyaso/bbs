@@ -5,52 +5,47 @@ const bodyParser = require('body-parser');
 const app = express();
 const port = process.env.PORT || 3000; // Vercel sets its own PORT
 
-// Use CORS middleware to allow requests from your frontend
+// CORSミドルウェアを使用し、異なるオリジンからのリクエストを許可
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-app.use(bodyParser.json()); // For parsing application/json (if you switch to POST with JSON)
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-// --- In-memory "Database" ---
-// In a real application, replace this with a proper database (e.g., MongoDB, PostgreSQL, SQLite)
-let messages = []; // Stores objects like { id, name, message, seed, channel, timestamp }
+// --- インメモリ "データベース" ---
+// 注意：このデータはVercelのサーバーレス関数がアイドル状態になったり再起動したりすると消えます。
+// 本番環境では、MongoDB, PostgreSQLなどの永続的なデータベースを使用してください。
+let messages = []; // { id, name, message, seed, channel, timestamp, isVerified } を格納
 let messageIdCounter = 0;
 
-// --- Helper function to decode Base64 (from your frontend) ---
+// --- Base64デコードヘルパー関数 (フロントエンドから送られるメッセージ用) ---
 function decodeBase64Unicode(str) {
     try {
         return decodeURIComponent(escape(atob(str)));
     } catch (e) {
         console.error("Error decoding Base64 string:", e);
-        return ""; // Return empty or handle error appropriately
+        return "";
     }
 }
 
-// --- API Endpoints ---
+// --- APIエンドポイント ---
 
-// Endpoint to get BBS messages
+// 掲示板メッセージ取得エンドポイント
 // GET /api?t=<timestamp>&channel=<channel_name>&verify=<true/false>
 app.get('/api', (req, res) => {
-    const { channel, verify } = req.query; // 't' is for cache busting on frontend, not used here
+    const { channel, verify } = req.query;
 
     let filteredMessages = messages;
 
-    if (channel && channel !== 'all') { // Filter by channel if provided
+    // チャンネルでフィルタリング
+    if (channel && channel !== 'all') {
         filteredMessages = filteredMessages.filter(msg => msg.channel === channel);
     }
 
-    // Apply "verify" filter (スピ限) if needed.
-    // As per your frontend, this is a checkbox. We'll simulate a simple filter.
-    // You might want to implement a more complex logic here, e.g., only show messages
-    // from verified users, or messages that pass certain criteria.
+    // 「スピ限」フィルタリング（例：isVerifiedがtrueのメッセージのみ表示）
     if (verify === 'true') {
-        // Example: Only show messages where the seed is a specific value or pattern
-        // For now, let's just show messages that are 'verified' in some arbitrary way
-        // In a real app, this would be a database field or a more complex check.
         filteredMessages = filteredMessages.filter(msg => msg.isVerified === true);
     }
 
-
-    // Format messages for display (similar to your frontend expectation)
+    // メッセージをHTML形式に整形
     const formattedMessages = filteredMessages.map(msg => {
         const date = new Date(msg.timestamp);
         const dateStr = date.toLocaleString('ja-JP', {
@@ -68,7 +63,7 @@ app.get('/api', (req, res) => {
     res.status(200).send(formattedMessages || "<p>メッセージがありません。</p>");
 });
 
-// Endpoint to send a message (your frontend uses GET /bbs/result)
+// メッセージ送信エンドポイント
 // GET /api/result?name=<name>&message=<base64_message>&seed=<seed>&channel=<channel>&verify=<true/false>
 app.get('/api/result', (req, res) => {
     const { name, message, seed, channel, verify } = req.query;
@@ -79,9 +74,8 @@ app.get('/api/result', (req, res) => {
 
     const decodedMessage = decodeBase64Unicode(message);
 
-    // Simulate "verification" for "スピ限". This is just an example.
-    // You might have a list of verified seeds, or specific rules.
-    const isVerified = (verify === 'true'); // For now, just passes the frontend 'verify' state
+    // 「スピ限」の状態を保存
+    const isVerified = (verify === 'true');
 
     messageIdCounter++;
     const newMessage = {
@@ -89,18 +83,16 @@ app.get('/api/result', (req, res) => {
         name: name,
         message: decodedMessage,
         seed: seed,
-        channel: channel || 'main', // Default to 'main' if not specified
+        channel: channel || 'main', // チャンネルが指定されない場合は'main'をデフォルトとする
         timestamp: Date.now(),
-        isVerified: isVerified // Store the verification status
+        isVerified: isVerified
     };
 
     messages.push(newMessage);
 
-    // For simplicity, just send a success response. Frontend will refetch BBS.
+    // フロントエンドがメッセージ送信後に掲示板を再読み込みするため、成功レスポンスを返す
     res.status(200).send("メッセージが送信されました！");
 });
 
-// --- Vercel Serverless Function Export ---
-// This is how Vercel recognizes and uses your API.
-// Instead of app.listen, we export the app instance.
+// Vercelサーバーレス関数としてExpressアプリをエクスポート
 module.exports = app;
