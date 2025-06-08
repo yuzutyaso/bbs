@@ -109,6 +109,12 @@ async function getPopularVideos() {
 
 async function getVideoDetails(videoId) {
     try {
+        // 注: tarry-lucky-magician.glitch.meのAPIエンドポイントは /api/:videoid の形式ですが、
+        // 既存のfetchWithFallback関数は /api/v1/videos/:videoId の形式を想定しています。
+        // もしtarry-lucky-magicianを優先的に使用したい場合は、fetchWithFallbackのロジックを調整するか、
+        // getVideoDetails内で直接そのURLを呼び出すように変更する必要があります。
+        // 現状では、fetchWithFallbackがINVIDIOUS_INSTANCESリスト内のインスタンス（通常は/api/v1/videos/:videoIdの形式）を試行します。
+        // ただし、返されるデータ構造は、ユーザーが提供した例のフィールドを考慮して処理されます。
         const response = await fetchWithFallback(`api/v1/videos/${videoId}`);
         return await response.json();
     } catch (error) {
@@ -264,41 +270,55 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (videoTitle) videoTitle.textContent = '動画情報を読み込み中...'; // ローディング表示
             const videoDetails = await getVideoDetails(videoId);
             if (videoDetails) {
-                if (videoTitlePage) videoTitlePage.textContent = `${videoDetails.title} - 簡易YouTube`;
-                if (videoTitle) videoTitle.textContent = videoDetails.title;
+                if (videoTitlePage) videoTitlePage.textContent = `${videoDetails.videoTitle || videoDetails.title} - 簡易YouTube`;
+                if (videoTitle) videoTitle.textContent = videoDetails.videoTitle || videoDetails.title;
                 if (videoChannelLink) {
-                    videoChannelLink.textContent = videoDetails.author;
-                    videoChannelLink.href = `channel.html?c=${videoDetails.authorId}`;
+                    videoChannelLink.textContent = videoDetails.channelName || videoDetails.author;
+                    videoChannelLink.href = `channel.html?c=${videoDetails.channelId || videoDetails.authorId}`;
                 }
-                if (videoDescription) videoDescription.textContent = videoDetails.description;
+                if (videoDescription) videoDescription.textContent = videoDetails.videoDes || videoDetails.description;
 
                 // 新しい動画詳細要素にデータを設定
                 if (videoViewCount) {
-                    videoViewCount.textContent = videoDetails.viewCount ? videoDetails.viewCount.toLocaleString() + '回視聴' : 'N/A';
+                    // Use videoViews from the new structure, fallback to viewCount
+                    videoViewCount.textContent = (videoDetails.videoViews || videoDetails.viewCount) ? (videoDetails.videoViews || videoDetails.viewCount).toLocaleString() + '回視聴' : 'N/A';
                 }
                 if (videoPublishedDate) {
+                    // publishedText is typically from Invidious API. If the new API doesn't provide it, it will be N/A
                     videoPublishedDate.textContent = videoDetails.publishedText || 'N/A';
                 }
                 if (videoLikes) {
                     videoLikes.textContent = videoDetails.likeCount ? videoDetails.likeCount.toLocaleString() : 'N/A';
                 }
                 if (videoDislikes) {
-                    // Invidious APIではdislikeCountが0の場合も`null`ではなく`0`が返されることが多いですが、
-                    // 不確実な場合はフォールバックを設定するのが安全です。
                     videoDislikes.textContent = (videoDetails.dislikeCount !== null && videoDetails.dislikeCount !== undefined) ? videoDetails.dislikeCount.toLocaleString() : 'N/A';
                 }
 
 
                 // 画質オプションを populate
-                if (qualitySelect && videoDetails.formatStreams) {
+                if (qualitySelect) {
                     const qualityOptions = {};
-                    videoDetails.formatStreams.forEach(stream => {
-                        // オーディオストリームとビデオストリームの両方を含むURLに焦点を当てる
-                        // そして、品質ラベルがあるもののみ (m4aは通常オーディオのみ)
-                        if (stream.url && stream.qualityLabel && stream.container !== 'm4a') {
-                            qualityOptions[stream.qualityLabel] = stream.url;
-                        }
-                    });
+                    let streamsToProcess = [];
+
+                    // Check for streamUrls first (from the user-provided example structure)
+                    if (videoDetails.streamUrls && videoDetails.streamUrls.length > 0) {
+                        streamsToProcess = videoDetails.streamUrls;
+                        streamsToProcess.forEach(stream => {
+                            if (stream.url && stream.resolution) {
+                                qualityOptions[stream.resolution] = stream.url;
+                            }
+                        });
+                    } else if (videoDetails.formatStreams && videoDetails.formatStreams.length > 0) {
+                        // Fallback to formatStreams (from typical Invidious API structure)
+                        streamsToProcess = videoDetails.formatStreams;
+                        streamsToProcess.forEach(stream => {
+                            // オーディオストリームとビデオストリームの両方を含むURLに焦点を当てる
+                            // そして、品質ラベルがあるもののみ (m4aは通常オーディオのみ)
+                            if (stream.url && stream.qualityLabel && stream.container !== 'm4a') {
+                                qualityOptions[stream.qualityLabel] = stream.url;
+                            }
+                        });
+                    }
 
                     // より良い表示のために画質をソート（例: 360p, 480p, 720p, 1080p）
                     const sortedQualities = Object.keys(qualityOptions).sort((a, b) => {
@@ -316,7 +336,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         qualitySelect.appendChild(option);
                     } else {
                         // 最高品質をデフォルトで選択肢の先頭に持ってくるか、利用可能な最高品質を初期設定する
-                        // 例: 最高品質を最初に
                         sortedQualities.reverse().forEach(quality => { // 降順にソートして追加
                             const option = document.createElement('option');
                             option.value = qualityOptions[quality];
@@ -325,15 +344,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
 
                         // 利用可能な最高品質を初期ビデオソースとして設定
-                        // sortedQualitiesは既に降順なので、最初の要素が最高品質
-                        if (videoPlayer) {
+                        if (videoPlayer && sortedQualities.length > 0) {
                             videoPlayer.src = qualityOptions[sortedQualities[0]];
                             qualitySelect.value = qualityOptions[sortedQualities[0]];
                         }
                     }
 
                     // 画質変更のハンドリング
-                    if (videoPlayer) { // videoPlayerが存在することを確認
+                    if (videoPlayer) {
                         qualitySelect.addEventListener('change', (event) => {
                             videoPlayer.src = event.target.value;
                             videoPlayer.load(); // 新しいソースでビデオをリロード
@@ -343,6 +361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                      // qualitySelectが見つからないか、ストリームがない場合のフォールバック
                     if (videoDetails.hlsUrl) { // HLSストリームがあればそれを試す
                         videoPlayer.src = videoDetails.hlsUrl;
+                    } else if (videoDetails.streamUrls && videoDetails.streamUrls.length > 0) { // Check the new streamUrls
+                        videoPlayer.src = videoDetails.streamUrls[0].url;
                     } else if (videoDetails.formatStreams && videoDetails.formatStreams.length > 0) {
                         // 最初の利用可能なストリームURLを使用 (ベストエフォート)
                         videoPlayer.src = videoDetails.formatStreams[0].url;
