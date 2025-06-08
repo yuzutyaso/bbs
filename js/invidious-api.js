@@ -1,6 +1,6 @@
 // js/invidious-api.js
 
-const INVIDIOUS_INSTANCE = 'https://cal1.iv.ggtyler.dev'; // Choose a reliable instance
+const INVIDIOUS_INSTANCE = 'https://pol1.iv.ggtyler.dev'; // Choose a reliable instance
 // You can try other instances if this one has issues, e.g., 'https://vid.puffyan.us'
 
 /**
