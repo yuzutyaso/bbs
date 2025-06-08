@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const qualitySelect = document.getElementById('quality-select');
         const relatedVideosGrid = document.getElementById('related-videos-grid');
 
-        // New elements for video info (if you add them to video.html)
+        // 動画詳細情報を表示するための要素 (video.htmlでこれらのIDが設定されていることを確認してください)
         const videoViewCount = document.getElementById('video-view-count');
         const videoPublishedDate = document.getElementById('video-published-date');
         const videoLikes = document.getElementById('video-likes');
@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (videoDescription) videoDescription.textContent = videoDetails.description;
 
-                // Populate new video detail elements
+                // 新しい動画詳細要素にデータを設定
                 if (videoViewCount) {
                     videoViewCount.textContent = videoDetails.viewCount ? videoDetails.viewCount.toLocaleString() + '回視聴' : 'N/A';
                 }
@@ -283,7 +283,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     videoLikes.textContent = videoDetails.likeCount ? videoDetails.likeCount.toLocaleString() : 'N/A';
                 }
                 if (videoDislikes) {
-                    videoDislikes.textContent = videoDetails.dislikeCount ? videoDetails.dislikeCount.toLocaleString() : 'N/A';
+                    // Invidious APIではdislikeCountが0の場合も`null`ではなく`0`が返されることが多いですが、
+                    // 不確実な場合はフォールバックを設定するのが安全です。
+                    videoDislikes.textContent = (videoDetails.dislikeCount !== null && videoDetails.dislikeCount !== undefined) ? videoDetails.dislikeCount.toLocaleString() : 'N/A';
                 }
 
 
@@ -313,7 +315,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         option.disabled = true;
                         qualitySelect.appendChild(option);
                     } else {
-                        sortedQualities.forEach(quality => {
+                        // 最高品質をデフォルトで選択肢の先頭に持ってくるか、利用可能な最高品質を初期設定する
+                        // 例: 最高品質を最初に
+                        sortedQualities.reverse().forEach(quality => { // 降順にソートして追加
                             const option = document.createElement('option');
                             option.value = qualityOptions[quality];
                             option.textContent = quality;
@@ -321,25 +325,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
 
                         // 利用可能な最高品質を初期ビデオソースとして設定
+                        // sortedQualitiesは既に降順なので、最初の要素が最高品質
                         if (videoPlayer) {
-                            videoPlayer.src = qualityOptions[sortedQualities[sortedQualities.length - 1]]; // 最高品質
-                            qualitySelect.value = qualityOptions[sortedQualities[sortedQualities.length - 1]]; // ドロップダウンで選択
+                            videoPlayer.src = qualityOptions[sortedQualities[0]];
+                            qualitySelect.value = qualityOptions[sortedQualities[0]];
                         }
                     }
 
                     // 画質変更のハンドリング
-                    if (videoPlayer) { // Ensure videoPlayer exists before attaching listener
+                    if (videoPlayer) { // videoPlayerが存在することを確認
                         qualitySelect.addEventListener('change', (event) => {
                             videoPlayer.src = event.target.value;
                             videoPlayer.load(); // 新しいソースでビデオをリロード
                         });
                     }
                 } else if (videoPlayer) {
-                     // qualitySelectが見つからないか、ストリームがない場合のフォールバック（例: 埋め込みプレイヤーなしの動画）
+                     // qualitySelectが見つからないか、ストリームがない場合のフォールバック
                     if (videoDetails.hlsUrl) { // HLSストリームがあればそれを試す
                         videoPlayer.src = videoDetails.hlsUrl;
                     } else if (videoDetails.formatStreams && videoDetails.formatStreams.length > 0) {
-                        // 最初の利用可能なストリームURLを使用
+                        // 最初の利用可能なストリームURLを使用 (ベストエフォート)
                         videoPlayer.src = videoDetails.formatStreams[0].url;
                     } else {
                         videoPlayer.innerHTML = '<p>この動画の再生可能なストリームが見つかりませんでした。</p>';
@@ -351,6 +356,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (relatedVideosGrid) {
                     if (videoDetails.relatedVideos && videoDetails.relatedVideos.length > 0) {
                         relatedVideosGrid.innerHTML = ''; // 既存のコンテンツをクリア
+                        // スケルトンスクリーンを適用する場合、ここでplaceholdersをレンダリングし、
+                        // データロード後に実際のコンテンツに置き換えることができます。
                         videoDetails.relatedVideos.slice(0, 5).forEach(relatedVideo => { // 最大5件の関連動画を表示
                             relatedVideosGrid.appendChild(createVideoCard(relatedVideo));
                         });
@@ -386,13 +393,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (channelDetails) {
                 if (channelTitlePage) channelTitlePage.textContent = `${channelDetails.author} - 簡易YouTube`;
                 if (channelAvatar && channelDetails.authorThumbnails && channelDetails.authorThumbnails.length > 0) {
+                    // 適切なサイズのサムネイルを選択することも可能
                     channelAvatar.src = channelDetails.authorThumbnails[0].url;
                 } else if (channelAvatar) {
                     channelAvatar.src = 'https://via.placeholder.com/120x120?text=No+Avatar'; // Fallback
                 }
                 if (channelName) channelName.textContent = channelDetails.author;
                 if (channelDescription) channelDescription.textContent = channelDetails.description || '説明はありません。';
-                if (channelSubscribers) channelSubscribers.textContent = channelDetails.subCount ? channelDetails.subCount.toLocaleString() : 'N/A';
+                if (channelSubscribers) channelSubscribers.textContent = channelDetails.subCount ? channelDetails.subCount.toLocaleString() + '人' : 'N/A';
             } else if (channelName) {
                 channelName.textContent = 'チャンネルが見つかりませんでした。すべてのInvidiousインスタンスが利用できないか、チャンネルが存在しません。';
             }
