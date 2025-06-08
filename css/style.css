@@ -1,0 +1,193 @@
+/* css/style.css */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+header {
+    background-color: #c4302b; /* YouTube Red */
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+header h1 a {
+    color: white;
+    text-decoration: none;
+}
+
+#search-form, #search-form-header {
+    display: flex;
+}
+
+#search-input, #search-input-header {
+    padding: 8px;
+    border: none;
+    border-radius: 3px 0 0 3px;
+    width: 300px;
+}
+
+#search-form button, #search-form-header button {
+    background-color: #a32822;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 0 3px 3px 0;
+    cursor: pointer;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+section {
+    margin-bottom: 30px;
+}
+
+h2 {
+    color: #c4302b;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.video-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.video-card:hover {
+    transform: translateY(-5px);
+}
+
+.video-card img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.video-card a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    padding: 10px;
+}
+
+.video-card h3 {
+    font-size: 1.1em;
+    margin: 10px 0 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video-card p {
+    font-size: 0.9em;
+    color: #666;
+    margin: 0;
+}
+
+/* Video Player Specific Styles */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    height: 0;
+    overflow: hidden;
+    background-color: black;
+    margin-bottom: 20px;
+}
+
+#video-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* or 'cover' depending on preference */
+}
+
+.quality-selector {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    display: inline-block; /* Keep it compact */
+}
+
+.quality-selector label {
+    margin-right: 10px;
+    font-weight: bold;
+    color: #555;
+}
+
+.quality-selector select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    background-color: white;
+    cursor: pointer;
+}
+
+/* Channel Page Specific Styles */
+#channel-header-info { /* Renamed from channel-header to avoid conflict with potential HTML5 <header> element */
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #eee;
+}
+
+#channel-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 15px;
+    border: 3px solid #c4302b;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+#channel-name {
+    font-size: 2em;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+#channel-description {
+    font-size: 1em;
+    color: #555;
+    max-width: 800px;
+    margin: 0 auto 10px;
+    line-height: 1.6;
+}
+
+#channel-subscribers {
+    font-weight: bold;
+    color: #c4302b;
+  }
