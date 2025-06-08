@@ -2,8 +2,8 @@
 
 const INVIDIOUS_INSTANCES = [
     'https://rust.oskamp.nl/',
-    'https://siawaseok-wakame-server2.glitch.me/', // Note: Glitch instances might have rate limits or go to sleep
-    'https://clover-pitch-position.glitch.me/', // Note: Glitch instances might have rate limits or go to sleep
+    'https://siawaseok-wakame-server2.glitch.me/',
+    'https://clover-pitch-position.glitch.me/',
     'https://inv.nadeko.net/',
     'https://iv.duti.dev/',
     'https://yewtu.be/',
@@ -13,7 +13,7 @@ const INVIDIOUS_INSTANCES = [
     'https://invidious.tiekoetter.com/',
     'https://lekker.gay/',
     'https://nyc1.iv.ggtyler.dev/',
-    'https://iv.ggtyler.dev/', // Corrected from 'ttps://invid-api.poketube.fun/' which was malformed
+    'https://iv.ggtyler.dev/',
     'https://invid-api.poketube.fun/',
     'https://iv.melmac.space/',
     'https://cal1.iv.ggtyler.dev/',
@@ -59,7 +59,7 @@ const INVIDIOUS_INSTANCES = [
 /**
  * 複数のInvidiousインスタンスを順番に試行してAPIリクエストを実行する関数。
  * 最初の成功したレスポンスを返します。
- * @param {string} endpoint - Invidious APIのエンドポイント（例: '/api/v1/search?q=query'）
+ * @param {string} endpoint - Invidious APIのエンドポイント（例: 'api/v1/search?q=query'）
  * @returns {Promise<Response>} APIレスポンスオブジェクト
  * @throws {Error} すべてのインスタンスが失敗した場合
  */
@@ -99,9 +99,6 @@ async function searchVideos(query) {
 
 async function getPopularVideos() {
     try {
-        // Invidious APIには直接的な「人気動画」エンドポイントがない場合があります。
-        // 代わりに、利用可能な場合はトレンド動画を取得します。
-        // または、特定の人気チャンネルの動画を取得することも検討できます。
         const response = await fetchWithFallback(`api/v1/trending`);
         return await response.json();
     } catch (error) {
@@ -156,7 +153,7 @@ function createVideoCard(video) {
 
     videoCard.innerHTML = `
         <a href="video.html?v=${video.videoId}">
-            <img src="${thumbnailUrl}" alt="${video.title}">
+            <img src="${thumbnailUrl}" alt="${video.title}" loading="lazy">
             <h3>${video.title}</h3>
             ${authorLink}
         </a>
@@ -256,6 +253,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const qualitySelect = document.getElementById('quality-select');
         const relatedVideosGrid = document.getElementById('related-videos-grid');
 
+        // New elements for video info (if you add them to video.html)
+        const videoViewCount = document.getElementById('video-view-count');
+        const videoPublishedDate = document.getElementById('video-published-date');
+        const videoLikes = document.getElementById('video-likes');
+        const videoDislikes = document.getElementById('video-dislikes');
+
+
         if (videoId) {
             if (videoTitle) videoTitle.textContent = '動画情報を読み込み中...'; // ローディング表示
             const videoDetails = await getVideoDetails(videoId);
@@ -267,6 +271,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     videoChannelLink.href = `channel.html?c=${videoDetails.authorId}`;
                 }
                 if (videoDescription) videoDescription.textContent = videoDetails.description;
+
+                // Populate new video detail elements
+                if (videoViewCount) {
+                    videoViewCount.textContent = videoDetails.viewCount ? videoDetails.viewCount.toLocaleString() + '回視聴' : 'N/A';
+                }
+                if (videoPublishedDate) {
+                    videoPublishedDate.textContent = videoDetails.publishedText || 'N/A';
+                }
+                if (videoLikes) {
+                    videoLikes.textContent = videoDetails.likeCount ? videoDetails.likeCount.toLocaleString() : 'N/A';
+                }
+                if (videoDislikes) {
+                    videoDislikes.textContent = videoDetails.dislikeCount ? videoDetails.dislikeCount.toLocaleString() : 'N/A';
+                }
+
 
                 // 画質オプションを populate
                 if (qualitySelect && videoDetails.formatStreams) {
@@ -309,10 +328,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     // 画質変更のハンドリング
-                    qualitySelect.addEventListener('change', (event) => {
-                        videoPlayer.src = event.target.value;
-                        videoPlayer.load(); // 新しいソースでビデオをリロード
-                    });
+                    if (videoPlayer) { // Ensure videoPlayer exists before attaching listener
+                        qualitySelect.addEventListener('change', (event) => {
+                            videoPlayer.src = event.target.value;
+                            videoPlayer.load(); // 新しいソースでビデオをリロード
+                        });
+                    }
                 } else if (videoPlayer) {
                      // qualitySelectが見つからないか、ストリームがない場合のフォールバック（例: 埋め込みプレイヤーなしの動画）
                     if (videoDetails.hlsUrl) { // HLSストリームがあればそれを試す
@@ -371,7 +392,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (channelName) channelName.textContent = channelDetails.author;
                 if (channelDescription) channelDescription.textContent = channelDetails.description || '説明はありません。';
-                if (channelSubscribers) channelSubscribers.textContent = channelDetails.subCount || 'N/A';
+                if (channelSubscribers) channelSubscribers.textContent = channelDetails.subCount ? channelDetails.subCount.toLocaleString() : 'N/A';
             } else if (channelName) {
                 channelName.textContent = 'チャンネルが見つかりませんでした。すべてのInvidiousインスタンスが利用できないか、チャンネルが存在しません。';
             }
