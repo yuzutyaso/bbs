@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動画再生 - 簡易YouTube</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="/">簡易YouTube</a></h1>
+        <form id="search-form">
+            <input type="text" id="search-input" placeholder="動画を検索...">
+            <button type="submit">検索</button>
+        </form>
+    </header>
+
+    <main>
+        <div id="video-player-container">
+            <video id="video-player" controls autoplay></video>
+            <div id="video-details">
+                <h2 id="video-title"></h2>
+                <div class="channel-info">
+                    <img id="channel-image" src="" alt="チャンネルアイコン">
+                    <a id="channel-name" href="#"></a>
+                </div>
+                <p id="video-description"></p>
+                <div class="video-stats">
+                    <span id="video-views"></span> | <span id="video-likes"></span>
+                </div>
+                <div class="quality-selector">
+                    <label for="quality-select">画質:</label>
+                    <select id="quality-select"></select>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
